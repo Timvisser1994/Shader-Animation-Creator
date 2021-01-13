@@ -1,0 +1,19 @@
+.canvas {
+    -fx-stroke: green;
+    -fx-stroke-width: 5;
+    -fx-background-color: red;
+}
+
+.canvas {
+    -fx-fill: yellow;
+    -fx-stroke: green;
+    -fx-stroke-width: 5;
+    -fx-stroke-dash-array: 12 2 4 2;
+    -fx-stroke-dash-offset: 6;
+    -fx-stroke-line-cap: butt;
+}
+
+.button {
+    //-fx-font-size: 50;
+    -fx-text-fill: blue;
+}
