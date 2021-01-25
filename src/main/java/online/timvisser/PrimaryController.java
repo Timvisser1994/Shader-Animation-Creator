@@ -11,6 +11,7 @@ import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.TextField;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import online.timvisser.enums.Axis;
 import online.timvisser.interfaces.FXMLController;
@@ -34,6 +35,8 @@ public class PrimaryController implements FXMLController {
     private Point2D center;
     private Color selectedColor;
 
+    private boolean cursorOnCanvas;
+
     @Override
     public void initialize() {
 
@@ -48,24 +51,30 @@ public class PrimaryController implements FXMLController {
 
         this.resetCanvas();
 
-        canvas.setOnMouseClicked(mouseEvent -> {
-            var target = new Point2D(mouseEvent.getX(), mouseEvent.getY());
+        // Hook up all the plumbing around mouse events on our canvas
+        canvas.setOnMouseEntered(__ -> cursorOnCanvas = true);
+        canvas.setOnMouseExited(__ -> cursorOnCanvas = false);
+        canvas.setOnMouseDragged(mouseEvent -> { if (cursorOnCanvas) renderVector(mouseEvent); });
+        canvas.setOnMouseClicked(mouseEvent -> { if (cursorOnCanvas) renderVector(mouseEvent); });
+    }
 
-            var color = this.pickColor(mouseEvent.getX(), mouseEvent.getY());
-            preview.getGraphicsContext2D().setFill(color);
-            preview.getGraphicsContext2D().fillRect(0, 0, 20, 20);
+    private void renderVector(MouseEvent mouseEvent) {
+        var target = new Point2D(mouseEvent.getX(), mouseEvent.getY());
 
-            // Update the RGB values
-            r.setText((int) (color.getRed() * 255) + "");
-            g.setText((int) (color.getGreen() * 255) + "");
-            b.setText((int) (color.getBlue() * 255) + "");
+        var color = this.pickColor(mouseEvent.getX(), mouseEvent.getY());
+        preview.getGraphicsContext2D().setFill(color);
+        preview.getGraphicsContext2D().fillRect(0, 0, 20, 20);
 
-            this.resetCanvas();
+        // Update the RGB values
+        r.setText((int) (color.getRed() * 255) + "");
+        g.setText((int) (color.getGreen() * 255) + "");
+        b.setText((int) (color.getBlue() * 255) + "");
 
-            System.out.println(color);
+        this.resetCanvas();
 
-            context.strokeLine(center.getX(), center.getY(), target.getX(), target.getY());
-        });
+        System.out.println(color);
+
+        context.strokeLine(center.getX(), center.getY(), target.getX(), target.getY());
     }
 
     /**
@@ -131,7 +140,6 @@ public class PrimaryController implements FXMLController {
         //App.setRoot("secondary");
 
         System.out.println(canvas);
-//        System.out.println(rect);
 
         if (selectedColor != null) {
             var file = new File("./shader-animation.png");
