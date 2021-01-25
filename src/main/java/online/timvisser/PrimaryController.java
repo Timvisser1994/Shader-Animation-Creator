@@ -4,8 +4,6 @@ import ar.com.hjg.pngj.ImageInfo;
 import ar.com.hjg.pngj.ImageLineHelper;
 import ar.com.hjg.pngj.ImageLineInt;
 import ar.com.hjg.pngj.PngWriter;
-import ar.com.hjg.pngj.chunks.ChunkFactory;
-import ar.com.hjg.pngj.chunks.PngChunk;
 import javafx.fxml.FXML;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
@@ -14,11 +12,13 @@ import javafx.scene.control.TextField;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
 import online.timvisser.enums.Axis;
+import online.timvisser.factories.GradientFactory;
 import online.timvisser.interfaces.FXMLController;
 import online.timvisser.models.RGBAxisMapping;
 
 import java.io.File;
-import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class PrimaryController implements FXMLController {
 
@@ -32,9 +32,12 @@ public class PrimaryController implements FXMLController {
     @FXML
     private TextField r, g, b;
 
+    /** Helpers for rendering the canvas */
     private Point2D center;
-    private Color selectedColor;
+    private Color previewColor;
+    private List<Color> colors = new ArrayList<>();
 
+    /** Flag that determines if the cursor is currently on the canvas */
     private boolean cursorOnCanvas;
 
     @Override
@@ -55,24 +58,31 @@ public class PrimaryController implements FXMLController {
         canvas.setOnMouseEntered(__ -> cursorOnCanvas = true);
         canvas.setOnMouseExited(__ -> cursorOnCanvas = false);
         canvas.setOnMouseDragged(mouseEvent -> { if (cursorOnCanvas) renderVector(mouseEvent); });
-        canvas.setOnMouseClicked(mouseEvent -> { if (cursorOnCanvas) renderVector(mouseEvent); });
+        canvas.setOnMouseClicked(mouseEvent -> {
+            if (cursorOnCanvas) {
+                renderVector(mouseEvent);
+                colors.add(previewColor);
+            }
+        });
     }
 
+    /**
+     * Renders the vector, updates the UI for it
+     * @param mouseEvent The mouse event on the canvas
+     */
     private void renderVector(MouseEvent mouseEvent) {
         var target = new Point2D(mouseEvent.getX(), mouseEvent.getY());
 
-        var color = this.pickColor(mouseEvent.getX(), mouseEvent.getY());
-        preview.getGraphicsContext2D().setFill(color);
+        previewColor = this.pickColor(mouseEvent.getX(), mouseEvent.getY());
+        preview.getGraphicsContext2D().setFill(previewColor);
         preview.getGraphicsContext2D().fillRect(0, 0, 20, 20);
 
         // Update the RGB values
-        r.setText((int) (color.getRed() * 255) + "");
-        g.setText((int) (color.getGreen() * 255) + "");
-        b.setText((int) (color.getBlue() * 255) + "");
+        r.setText((int) (previewColor.getRed() * 255) + "");
+        g.setText((int) (previewColor.getGreen() * 255) + "");
+        b.setText((int) (previewColor.getBlue() * 255) + "");
 
         this.resetCanvas();
-
-        System.out.println(color);
 
         context.strokeLine(center.getX(), center.getY(), target.getX(), target.getY());
     }
@@ -131,36 +141,45 @@ public class PrimaryController implements FXMLController {
         // 0 ---------> 1
         var vertical = 1 - (y / canvas.getHeight());
 
-        selectedColor = new Color(vertical, 0, horizontal, 1);
-        return selectedColor;
+        previewColor = new Color(vertical, 0, horizontal, 1);
+        return previewColor;
     }
 
+    /**
+     * Writes the contents of the colors array to a PNG repeatedly
+     */
     @FXML
-    private void writeToPNG() throws IOException {
-        //App.setRoot("secondary");
+    private void writeToPNG() {
+        var amountOfColors = colors.size();
 
-        System.out.println(canvas);
-
-        if (selectedColor != null) {
+        if (amountOfColors > 0) {
             var file = new File("./shader-animation.png");
             var imageInfo = new ImageInfo(100, 100, 8, false);
             var imageLine = new ImageLineInt(imageInfo);
-            var tim = new PngWriter(file, imageInfo);
+            var png = new PngWriter(file, imageInfo);
 
-            var red = (int) (selectedColor.getRed() * 255);
-            var green = (int) (selectedColor.getGreen() * 255);
-            var blue = (int) (selectedColor.getBlue() * 255);
+            int red, green, blue;
 
             for (int col = 0; col < imageInfo.cols; col++) {
+                var repeater = col % amountOfColors;
+
+                var color = colors.get(repeater);
+                red = (int) (color.getRed() * 255);
+                green = (int) (color.getGreen() * 255);
+                blue = (int) (color.getBlue() * 255);
+
                 ImageLineHelper.setPixelRGB8(imageLine, col, red, green, blue);
             }
 
             for (int row = 0; row < imageInfo.rows; row++) {
-                tim.writeRow(imageLine);
+                png.writeRow(imageLine);
             }
 
-            tim.end();
-            tim.close();
+            png.end();
+            png.close();
+
+            // Clear our colors
+            colors.clear();
         }
     }
 }
