@@ -1,12 +1,22 @@
 package online.timvisser;
 
+import ar.com.hjg.pngj.ImageInfo;
+import ar.com.hjg.pngj.ImageLineHelper;
+import ar.com.hjg.pngj.ImageLineInt;
+import ar.com.hjg.pngj.PngWriter;
+import ar.com.hjg.pngj.chunks.ChunkFactory;
+import ar.com.hjg.pngj.chunks.PngChunk;
 import javafx.fxml.FXML;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.control.TextField;
 import javafx.scene.paint.Color;
+import online.timvisser.enums.Axis;
 import online.timvisser.interfaces.FXMLController;
+import online.timvisser.models.RGBAxisMapping;
 
+import java.io.File;
 import java.io.IOException;
 
 public class PrimaryController implements FXMLController {
@@ -18,10 +28,18 @@ public class PrimaryController implements FXMLController {
     @FXML
     private Canvas preview;
 
+    @FXML
+    private TextField r, g, b;
+
     private Point2D center;
+    private Color selectedColor;
 
     @Override
     public void initialize() {
+
+        //debug
+        RGBAxisMapping.associateColor(Color.BLUE, Axis.X);
+        RGBAxisMapping.associateColor(Color.RED, Axis.Y);
 
         canvas.setWidth(400);
         canvas.setHeight(200);
@@ -36,6 +54,11 @@ public class PrimaryController implements FXMLController {
             var color = this.pickColor(mouseEvent.getX(), mouseEvent.getY());
             preview.getGraphicsContext2D().setFill(color);
             preview.getGraphicsContext2D().fillRect(0, 0, 20, 20);
+
+            // Update the RGB values
+            r.setText((int) (color.getRed() * 255) + "");
+            g.setText((int) (color.getGreen() * 255) + "");
+            b.setText((int) (color.getBlue() * 255) + "");
 
             this.resetCanvas();
 
@@ -85,7 +108,7 @@ public class PrimaryController implements FXMLController {
     /**
      * Maps a canvas position to the corresponding Color
      * @param x The x-position (from left to right)
-     * @param y The y-position (from top to bottom
+     * @param y The y-position (from top to bottom)
      * @return The Color at that position
      */
     private Color pickColor(double x, double y) {
@@ -99,14 +122,37 @@ public class PrimaryController implements FXMLController {
         // 0 ---------> 1
         var vertical = 1 - (y / canvas.getHeight());
 
-        return new Color(horizontal, vertical, 0, 1);
+        selectedColor = new Color(vertical, 0, horizontal, 1);
+        return selectedColor;
     }
 
     @FXML
-    private void switchToSecondary() throws IOException {
+    private void writeToPNG() throws IOException {
         //App.setRoot("secondary");
 
         System.out.println(canvas);
 //        System.out.println(rect);
+
+        if (selectedColor != null) {
+            var file = new File("./shader-animation.png");
+            var imageInfo = new ImageInfo(100, 100, 8, false);
+            var imageLine = new ImageLineInt(imageInfo);
+            var tim = new PngWriter(file, imageInfo);
+
+            var red = (int) (selectedColor.getRed() * 255);
+            var green = (int) (selectedColor.getGreen() * 255);
+            var blue = (int) (selectedColor.getBlue() * 255);
+
+            for (int col = 0; col < imageInfo.cols; col++) {
+                ImageLineHelper.setPixelRGB8(imageLine, col, red, green, blue);
+            }
+
+            for (int row = 0; row < imageInfo.rows; row++) {
+                tim.writeRow(imageLine);
+            }
+
+            tim.end();
+            tim.close();
+        }
     }
 }
