@@ -1,4 +1,4 @@
-package online.timvisser;
+package online.timvisser.factories;
 
 import javafx.scene.paint.Color;
 import javafx.scene.paint.CycleMethod;
